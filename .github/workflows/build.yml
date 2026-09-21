@@ -27,7 +27,9 @@ jobs:
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libdbus-1-dev libx11-dev libxtst-dev libxrandr-dev libxi-dev libglib2.0-dev
+          sudo apt-get install -y pkg-config musl-tools libdbus-1-dev libx11-dev libxtst-dev libxrandr-dev libxi-dev libglib2.0-dev
+          echo "CC_aarch64_unknown_linux_musl=musl-gcc" >> "$GITHUB_ENV"
+          echo "CXX_aarch64_unknown_linux_musl=musl-g++" >> "$GITHUB_ENV"
 
       - name: Install Rust toolchain and musl target
         uses: dtolnay/rust-toolchain@1.97.1
