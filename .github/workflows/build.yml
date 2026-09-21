@@ -37,6 +37,9 @@ jobs:
               export PATH=/root/.cargo/bin:$PATH
               # Alpine ships gcc without a `cc` symlink; point Rust at it explicitly.
               export CC=gcc CXX=g++ AR=ar
+              # X11 development packages provide shared libs on Alpine, so disable
+              # Rust's default fully-static musl link.
+              export RUSTFLAGS="-C target-feature=-crt-static"
               cargo build --locked --release -p cua-driver
             '
 
