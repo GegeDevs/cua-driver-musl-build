@@ -68,15 +68,16 @@ Expected binary characteristics:
 
 ## Headless X11
 
-Start a virtual display, then expose it to the shell that launches Hermes:
+Start the stack on demand (no autostart) with the idempotent helper script `/usr/local/bin/cua-x11-start`. It starts Xvfb, a session D-Bus, and the AT-SPI bus only if they are not already running. Requires Xvfb, dbus, and `at-spi2-core` installed (`apk add xvfb dbus at-spi2-core gsettings-desktop-schemas dconf`).
 
-    Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp
-    mkdir -p /run/user/0
-    dbus-daemon --session --address=unix:path=/run/user/0/bus --fork --nopidfile
-    DISPLAY=:99 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus \
-      /usr/libexec/at-spi-bus-launcher --launch-immediately
+    cua-x11-start
 
-Set `DISPLAY=:99` and `DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus` in the login environment only when the machine is intentionally headless. A real X11 desktop should use its own display and session bus.
+Then launch Hermes from a shell that has the display env (persisted in `.zshrc` when the machine is intentionally headless):
+
+    export DISPLAY=:99
+    export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus
+
+If these processes die or the machine reboots, Xvfb/AT-SPI are NOT restarted automatically — run `cua-x11-start` again. The script is the source of truth for what must be running; do not hand-start daemons when the helper exists. A real X11 desktop should use its own display and session bus.
 
 ## Pitfalls
 
