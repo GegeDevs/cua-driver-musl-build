@@ -33,6 +33,7 @@ jobs:
               apk add --no-cache build-base cargo rustup pkgconf \
                 dbus-dev libx11-dev libxtst-dev libxrandr-dev libxi-dev \
                 glib-dev wayland-dev
+              which cc gcc || ls /usr/bin/cc /usr/bin/gcc 2>&1 || true
               /usr/bin/rustup-init -y --profile minimal --default-toolchain 1.97.1 --no-modify-path
               export PATH=/root/.cargo/bin:$$PATH
               cargo build --locked --release -p cua-driver
