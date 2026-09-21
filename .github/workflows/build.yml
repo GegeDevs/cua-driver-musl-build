@@ -24,33 +24,27 @@ jobs:
           ref: ${{ inputs.ref || 'main' }}
           fetch-depth: 1
 
-      - name: Install Linux build dependencies (musl cross)
+      - name: Build natively inside Alpine musl (arm64)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config musl-tools libdbus-1-dev libx11-dev libxtst-dev libxrandr-dev libxi-dev libglib2.0-dev
-          echo "CC_aarch64_unknown_linux_musl=musl-gcc" >> "$GITHUB_ENV"
-          echo "AR_aarch64_unknown_linux_musl=musl-gcc" >> "$GITHUB_ENV"
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> "$GITHUB_ENV"
-          echo "PKG_CONFIG_ALLOW_CROSS_aarch64_unknown_linux_musl=1" >> "$GITHUB_ENV"
-          echo "PKG_CONFIG_ALLOW_CROSS_aarch64-unknown-linux-musl=1" >> "$GITHUB_ENV"
-
-      - name: Install Rust 1.97.1 with musl target
-        uses: dtolnay/rust-toolchain@1.97.1
-        with:
-          targets: aarch64-unknown-linux-musl
-
-      - name: Build cua-driver
-        working-directory: libs/cua-driver/rust
-        env:
-          RUSTFLAGS: '-C target-feature=+crt-static'
-        run: cargo build --locked --release --target aarch64-unknown-linux-musl -p cua-driver
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src" \
+            -w /src/libs/cua-driver/rust \
+            alpine:3.23 sh -euxc '
+              apk add --no-cache build-base cargo rustup pkgconf \
+                dbus-dev libx11-dev libxtst-dev libxrandr-dev libxi-dev \
+                glib-dev wayland-dev
+              /usr/bin/rustup-init -y --profile minimal --default-toolchain 1.97.1 --no-modify-path
+              export PATH=/root/.cargo/bin:$PATH
+              # Alpine ships gcc without a `cc` symlink; point Rust at it explicitly.
+              export CC=gcc CXX=g++ AR=ar
+              cargo build --locked --release -p cua-driver
+            '
 
       - name: Verify binary
         run: |
-          file libs/cua-driver/rust/target/aarch64-unknown-linux-musl/release/cua-driver
-          ldd libs/cua-driver/rust/target/aarch64-unknown-linux-musl/release/cua-driver || true
+          file libs/cua-driver/rust/target/release/cua-driver
           mkdir -p artifact
-          cp libs/cua-driver/rust/target/aarch64-unknown-linux-musl/release/cua-driver artifact/cua-driver
+          cp libs/cua-driver/rust/target/release/cua-driver artifact/cua-driver
           sha256sum artifact/cua-driver > artifact/SHA256SUMS
 
       - name: Upload cua-driver artifact
