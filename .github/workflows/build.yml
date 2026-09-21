@@ -26,34 +26,34 @@ jobs:
 
       - name: Build natively inside Alpine musl (arm64)
         run: |
-          docker run --rm \
+          set -eux
+          docker run --rm --platform linux/arm64 \
             -v "$GITHUB_WORKSPACE:/src" \
-            -w /src/libs/cua-driver/rust \
+            -w /src \
             alpine:3.23 sh -euxc '
               apk add --no-cache build-base cargo rustup pkgconf \
                 dbus-dev libx11-dev libxtst-dev libxrandr-dev libxi-dev \
                 glib-dev wayland-dev
-              /usr/bin/rustup-init -y --profile minimal --default-toolchain 1.97.1 --no-modify-path
+              cd /src/libs/cua-driver/rust
+              /usr/bin/rustup-init -y --profile minimal --default-toolchain 1.97.1 \
+                --no-modify-path
               export PATH=/root/.cargo/bin:$PATH
-              # Alpine ships gcc without a `cc` symlink; point Rust at it explicitly.
               export CC=gcc CXX=g++ AR=ar
-              # X11 development packages provide shared libs on Alpine, so disable
-              # Rust's default fully-static musl link.
               export RUSTFLAGS="-C target-feature=-crt-static"
               cargo build --locked --release -p cua-driver
+              mkdir -p /src/dist
+              cp target/release/cua-driver /src/dist/cua-driver
             '
-
       - name: Verify binary
         run: |
-          file libs/cua-driver/rust/target/release/cua-driver
-          mkdir -p artifact
-          cp libs/cua-driver/rust/target/release/cua-driver artifact/cua-driver
-          sha256sum artifact/cua-driver > artifact/SHA256SUMS
+          file dist/cua-driver
+          ls -lh dist/
+          sha256sum dist/cua-driver
 
       - name: Upload cua-driver artifact
         uses: actions/upload-artifact@v4
         with:
           name: cua-driver-aarch64-unknown-linux-musl
-          path: artifact/
+          path: dist/
           if-no-files-found: error
           retention-days: 30
