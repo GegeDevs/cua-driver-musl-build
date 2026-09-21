@@ -81,6 +81,8 @@ If these processes die or the machine reboots, Xvfb/AT-SPI are NOT restarted aut
 
 ## Pitfalls
 
+- This skill is mirrored in the `GegeDevs/cua-driver-musl-build` repo at `skills/software-development/alpine-cua-driver-musl/SKILL.md`. Every edit to the local skill must be committed and pushed to the repo in the same pass; never update one side only.
+
 - A symlink can make `which cua-driver` look valid while its target is absent or has the wrong ABI. Always inspect the target with `file`.
 - `zsh` may cache a failed command lookup; run `hash -r` or start a fresh shell after replacing the binary.
 - Do not use Ubuntu glibc X11 development libraries to link a musl target.
