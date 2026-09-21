@@ -1,0 +1,57 @@
+name: Build cua-driver (ARM64 musl)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'trycua/cua ref (branch, tag, or commit)'
+        required: false
+        default: 'main'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout upstream cua
+        uses: actions/checkout@v4
+        with:
+          repository: trycua/cua
+          ref: ${{ inputs.ref || 'main' }}
+          fetch-depth: 1
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libdbus-1-dev libx11-dev libxtst-dev libxrandr-dev libxi-dev libglib2.0-dev
+
+      - name: Install Rust toolchain and musl target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-musl
+
+      - name: Build cua-driver
+        working-directory: libs/cua-driver/rust
+        env:
+          RUSTFLAGS: '-C target-feature=+crt-static'
+        run: cargo build --locked --release --target aarch64-unknown-linux-musl -p cua-driver
+
+      - name: Verify binary
+        run: |
+          file libs/cua-driver/rust/target/aarch64-unknown-linux-musl/release/cua-driver
+          ldd libs/cua-driver/rust/target/aarch64-unknown-linux-musl/release/cua-driver || true
+          mkdir -p artifact
+          cp libs/cua-driver/rust/target/aarch64-unknown-linux-musl/release/cua-driver artifact/cua-driver
+          sha256sum artifact/cua-driver > artifact/SHA256SUMS
+
+      - name: Upload cua-driver artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cua-driver-aarch64-unknown-linux-musl
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 30
